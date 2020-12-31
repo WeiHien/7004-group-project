@@ -1,0 +1,116 @@
+---
+title: "7004-Group-Project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Introduction
+
+This is a R project.  
+  
+&nbsp;
+
+### 1.1 Objective
+
+Predicting profitable customer groups. Predict which customer group is worth targeting based on their spending score.
+
+- Predict customer age group based on customer characteristics
+- Predict spending behavior based on customer characteristics
+
+&nbsp;
+
+### 1.2 Load Data
+
+```{r}
+customers <- read.csv("Mall_Customers.csv")
+head(customers)
+```
+&nbsp;
+
+## 2. Data Preprocessing
+
+### 2.1 Include fundamental library
+
+First, load `tidyverse` package which could help in processing data.
+```{r, message=FALSE}
+library(tidyverse)
+```
+
+&nbsp;
+
+### 2.2 Data Cleaning
+
+First, check on each feature for missing data:
+
+```{r}
+apply(customers, 2, function(row) sum(is.na(row)))
+```
+Check on the summary of the data set:
+
+```{r}
+summary(customers)
+```
+By checking on the distribution on summary and NA count, this data set is clean without any unexpected outliers or missing values.  
+
+&nbsp;
+
+### 2.3 Data Transformation
+
+As our objective is to utilize classification to predict the age group of customers, we need to preprocess the age of customers into appropriate age group.  
+
+As the age distribution of the data set is comprised of all adults, the groups we are using are as follows:  
+
+- 18 to 35 - Young Adult
+- 36 to 55 - Middle Age Adult
+- Above 55 - Older Adult
+
+```{r}
+customers <- customers %>%
+  mutate(Age.Group = case_when(Age <= 35 ~ "Young Adult", Age <= 55 ~ "Middle Age Adult", Age > 55 ~ "Older Adult"))
+customers$Age.Group <- as.factor(customers$Age.Group)
+head(customers)
+```
+
+After grouping, the distribution of age group:
+```{r}
+table(customers$Age.Group)
+```
+&nbsp;
+
+## 3. EDA
+
+To investigate the correlation between the features, we use `pairs` function by R to plot and visualize the pairplot, while representing age group and gender as different colour respectively.
+
+```{r}
+pairs(customers[,3:5], pch = 19, col=customers$Gender)
+```
+
+```{r}
+pairs(customers[,3:5], pch = 19, col=customers$Age.Group)
+```
+
+From the pairplot, as opposed to what is expected, it seems there is no clear correlation can be found between the annual income and spending score.  
+
+One interesting observation is that young adult appears to have higher spending scores. To confirm on this observation, we make a bar plot to visualize the mean spending score.
+
+```{r}
+customers %>%
+  group_by(Age.Group) %>%
+  summarise(mean_spending_score=mean(Spending.Score..1.100.)) %>%
+  ggplot(aes(Age.Group, mean_spending_score)) + geom_bar(stat="identity")
+```
+
+From this barplot, it is clear that young adult has higher average spending score at about 60. This suggests that marketing could give more focus on this age group as they bring more profits.
+
+&nbsp;
+
+## 4. Prediction Model
+
+### 4.1 Regression on Spending Score
+
+### 4.2 Classification on Age Group
+
+## 5. Discussion
