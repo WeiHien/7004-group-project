@@ -80,16 +80,30 @@ table(customers$Age.Group)
 ```
 &nbsp;
 
+### 2.3 Data Reduction
+
+Check if there's duplicated Customer:
+```{r}
+sum(duplicated(customers$CustomerID))
+```
+After confirming all customers are unique, discard CustomerID column as it is not needed for our analysis:
+
+```{r}
+customers <- customers[,-1]
+```
+
+&nbsp;
+
 ## 3. EDA
 
 To investigate the correlation between the features, we use `pairs` function by R to plot and visualize the pairplot, while representing age group and gender as different colour respectively.
 
 ```{r}
-pairs(customers[,3:5], pch = 19, col=customers$Gender)
+pairs(customers[,2:4], pch = 19, col=customers$Gender)
 ```
 
 ```{r}
-pairs(customers[,3:5], pch = 19, col=customers$Age.Group)
+pairs(customers[,2:4], pch = 19, col=customers$Age.Group)
 ```
 
 From the pairplot, as opposed to what is expected, it seems there is no clear correlation can be found between the annual income and spending score.  
@@ -103,13 +117,95 @@ customers %>%
   ggplot(aes(Age.Group, mean_spending_score)) + geom_bar(stat="identity")
 ```
 
-From this barplot, it is clear that young adult has higher average spending score at about 60. This suggests that marketing could give more focus on this age group as they bring more profits.
+From this barplot, it is clear that young adult has higher average spending score at about 60. This suggests that marketing could give more focus on this age group as they bring more profits.  
+
+To further inspect on this observation, we plot the `coplot` to inspect the relation of Annual Income to Spending Score at different age range.  
+
+```{r}
+coplot(Spending.Score..1.100.~Annual.Income..k..|Age, customers)
+```
+  
+The coplot shows a similar pattern to previous pairplot.
 
 &nbsp;
 
 ## 4. Prediction Model
 
+First, load the popular R package used for classification and regression.
+
+```{r, message=FALSE}
+library(caret)
+```
+
+&nbsp;
+
 ### 4.1 Regression on Spending Score
+
+As our data points are not many, splitting into test and train set is not performed. Instead, we will utilize resampling for regression model training.  
+
+Besides, as caret would automatically split the factor variables into k-1 dummy variables, no preprocessing on the factor variables are needed.  
+
+Build multiple linear regression model:  
+
+- Predict Spending Score with other variables as predictors (Age Group instead of Age)
+- Resampling with repeated cross validation method
+
+```{r}
+train_control = trainControl(method="repeatedcv", number=10, repeats=3)
+model_lm <- train(Spending.Score..1.100.~., data=customers[,-2], trControl=train_control, method="lm", metric="RMSE", preProcess = c('scale', 'center'))
+summary(model_lm)
+```
+From the summary, we can verify that `caret` split the factor variables into k-1 dummy variables.  
+
+The R squared value is low, which suggests that this model doesn't fit very well.  
+  
+However, we can see that the `Age Group - Young Adult` is a significant predictor with low p-value. To verify on this, we make a plot on variable importance:  
+
+```{r}
+ggplot(varImp(model_lm))
+```
+  
+From the plot, we can see that whether the customers are young adult has significantly more impact than other predictors on the spending score. This also aligns with our earlier EDA.  
+
+Next, we make a plot to visualize the predicted Spending Score, using multiple lines to represent different gender and age group.  
+
+```{r}
+p1 <- predict(model_lm, data.frame(Gender="Male",Age.Group="Young Adult",Annual.Income..k..=15:137))
+p2 <- predict(model_lm, data.frame(Gender="Male",Age.Group="Middle Age Adult",Annual.Income..k..=15:137))
+p3 <- predict(model_lm, data.frame(Gender="Male",Age.Group="Older Adult",Annual.Income..k..=15:137))
+
+p4 <- predict(model_lm, data.frame(Gender="Female",Age.Group="Young Adult",Annual.Income..k..=15:137))
+p5 <- predict(model_lm, data.frame(Gender="Female",Age.Group="Middle Age Adult",Annual.Income..k..=15:137))
+p6 <- predict(model_lm, data.frame(Gender="Female",Age.Group="Older Adult",Annual.Income..k..=15:137))
+
+ggplot(data=customers) + geom_point(aes(x=Annual.Income..k.., y=Spending.Score..1.100.)) +
+  geom_line(data=data.frame(x=15:137, y=p1), aes(x=x,y=y,color="Young Adult", linetype = "Male")) +
+  geom_line(data=data.frame(x=15:137, y=p2), aes(x=x,y=y,color="Middle Age Adult", linetype = "Male")) +
+  geom_line(data=data.frame(x=15:137, y=p3), aes(x=x,y=y,color="Older Adult", linetype = "Male")) +
+  geom_line(data=data.frame(x=15:137, y=p4), aes(x=x,y=y,color="Young Adult", linetype = "Female")) +
+  geom_line(data=data.frame(x=15:137, y=p5), aes(x=x,y=y,color="Middle Age Adult", linetype = "Female")) +
+  geom_line(data=data.frame(x=15:137, y=p6), aes(x=x,y=y,color="Older Adult", linetype = "Female")) +
+  scale_colour_manual("",
+                      breaks = c("Young Adult", "Middle Age Adult", "Older Adult"),
+                      values = c("red", "green", "blue")) +
+  scale_linetype_manual("", breaks = c("Male", "Female"), values=c("solid", "dotted"))
+```
+  
+As caret provides regression functions for different methods in convenient way, we also build another regression model with `random forest` method to compare with linear regression model:  
+
+```{r}
+model_rf <- train(Spending.Score..1.100.~., data=customers[,c(-2)], trControl=train_control, method="rf", metric="RMSE", preProcess = c('scale', 'center'))
+model_rf
+```
+  
+Comparison of the 2 built models:  
+```{r}
+model_list = list(lm = model_lm, rf = model_rf)
+res <- resamples(model_list)
+summary(res)
+```
+  
+Both these methods returns similar metrics with small differences.
 
 ### 4.2 Classification on Age Group
 
