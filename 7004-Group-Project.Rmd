@@ -1,6 +1,9 @@
 ---
-title: "7004-Group-Project"
-output: html_document
+title: "Prediction of Prospective Customers of a Shopping Mall"
+description: "Group Project of WQD7004 Programming of Data Science"
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -9,25 +12,55 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## 1. Introduction
 
-This is a R project.  
-  
+Shopping malls and complexes are always indulged in the race to attract more customers and convert them in order to gain higher revenue and profits. To achieve this task, they have to analyze their customers thoroughly and deeply in order to understand how to market and serve them better. This is similar and related but slightly different from the UX methodology of creating user personas: creating your ideal customers, their pain points, a defining quote, and so on, to understand their perspective.
+
+With this goal in mind, many stores begin to collect and make use of their customer data and develop machine learning models to target the right ones. Through the data collected, shopping malls can gain a deeper understanding of customer preferences as well as the requirements for discovering valuable segments that would reap them maximum profit. This way, they can strategize their marketing techniques more efficiently and minimize the possibility of risk to their investment.
+
+In this project, we will study the consumers' spending behavior from a dataset of mall customers with different characteristics and predict which characteristic comprises customers with higher buying intention.
+
 &nbsp;
 
 ### 1.1 Objective
 
-Predicting profitable customer groups. Predict which customer group is worth targeting based on their spending score.
-
-- Predict customer age group based on customer characteristics
-- Predict spending behavior based on customer characteristics
+Find out which customers are worth being targeted by the shopping mall based on their characteristics:  
+  
+- Gender
+- Age
+- Annual income
 
 &nbsp;
 
-### 1.2 Load Data
+### 1.2 Questions
+
+With the objective to find out which customer likely to have higher buying intention, we would like to study on the correlation between the customer's characteristics and their spending score (score given based on money spent and the buying behavior). Besides, according to a research conducted on "Gender Differences in Saving and Spending Behaviours of Thai Students" (https://journals.sagepub.com/doi/abs/10.7227/RIE.90.1.5), the results shown male had a more positive attitude toward spending. Thus, we also would like to see if gender and age group makes a difference on the spending score. 
+
+The questions we would like to solve in this project are:
+
+1. What is the spending score of consumer with different combination of characteristics (age group, gender and annual income)?
+2. Which age group of the customers would have higher spending score?
+3. Which gender (male or female) of the customers would have higher spending score?
+
+Note: We will categorize ages into three different age groups in this project for classification.
+
+&nbsp;
+
+### 1.3 Dataset Used
+
+The dataset used in this project is retrived from the URL: https://www.kaggle.com/vjchoudhary7/customer-segmentation-tutorial-in-python
+
+There are 5 features given in the dataset:  
+  
+1. **CustomerID**: The unique identifier assigned to a customer
+2. **Gender**: Gender of the customer
+3. **Age**: Age of the customer
+4. **Annual Income (k$)**: Average annual income of the customer
+5. **Spending Score (1-100)**: The score given to a customer by the mall authorities, based on their money spent and the behavior of the customer
 
 ```{r}
 customers <- read.csv("Mall_Customers.csv")
 head(customers)
 ```
+
 &nbsp;
 
 ## 2. Data Preprocessing
@@ -41,31 +74,68 @@ library(tidyverse)
 
 &nbsp;
 
-### 2.2 Data Cleaning
+### 2.2 Data Exploration
+
+First, we need to explore our dataset and have a look on its contents.
+
+```{r}
+head(customers)
+```
+
+```{r}
+tail(customers)
+```
+
+Next, we will check the dimension of the dataset.
+
+```{r}
+dim(customers)
+```
+The dataset has 200 observations and 5 variables.
+
+After that, we will take a look on the structure of the dataset.
+
+```{r}
+str(customers)
+```
+
+The variables of the dataset are:  
+  
+1. CustomerID (integer)
+2. Gender (character)
+2. Age (integer)
+3. Annual.Income..k.. (integer)
+4. Spending.Score..1.100. (integer)
+
+&nbsp;
+
+### 2.3 Data Cleaning
 
 First, check on each feature for missing data:
 
 ```{r}
 apply(customers, 2, function(row) sum(is.na(row)))
 ```
+
 Check on the summary of the data set:
 
 ```{r}
 summary(customers)
 ```
+
 By checking on the distribution on summary and NA count, this data set is clean without any unexpected outliers or missing values.  
 
 &nbsp;
 
-### 2.3 Data Transformation
+### 2.4 Data Transformation
 
-As our objective is to utilize classification to predict the age group of customers, we need to preprocess the age of customers into appropriate age group.  
+As mentioned earlier in the introduction, the age of customers will be grouped into three different age groups to answer the question of which age group would have higher spending score. Thus, we need to preprocess the age of customers into appropriate age group.  
 
 As the age distribution of the data set is comprised of all adults, the groups we are using are as follows:  
 
-- 18 to 35 - Young Adult
-- 36 to 55 - Middle Age Adult
-- Above 55 - Older Adult
+- **18 to 35**: Young Adult
+- **36 to 55**: Middle Age Adult
+- **Above 55**: Older Adult
 
 ```{r}
 customers <- customers %>%
@@ -74,18 +144,22 @@ customers$Age.Group <- as.factor(customers$Age.Group)
 head(customers)
 ```
 
-After grouping, the distribution of age group:
+After grouping, the distribution of age group is as follows:
+
 ```{r}
 table(customers$Age.Group)
 ```
+
 &nbsp;
 
-### 2.3 Data Reduction
+### 2.5 Data Reduction
 
 Check if there's duplicated Customer:
+
 ```{r}
 sum(duplicated(customers$CustomerID))
 ```
+
 After confirming all customers are unique, discard CustomerID column as it is not needed for our analysis:
 
 ```{r}
@@ -99,7 +173,7 @@ customers <- customers[,-1]
 To investigate the correlation between the features, we use `pairs` function by R to plot and visualize the pairplot, while representing age group and gender as different colour respectively.
 
 ```{r}
-pairs(customers[,2:4], pch = 19, col=customers$Gender)
+pairs(customers[,2:4], pch = 19, col= customers$Gender)
 ```
 
 ```{r}
@@ -147,7 +221,7 @@ Besides, as caret would automatically split the factor variables into k-1 dummy 
 
 Build multiple linear regression model:  
 
-- Predict Spending Score with other variables as predictors (Age Group instead of Age)
+- Predict Spending core with other variables as predictors (Age Group instead of Age)
 - Resampling with repeated cross validation method
 
 ```{r}
@@ -207,6 +281,247 @@ summary(res)
   
 Both these methods returns similar metrics with small differences.
 
-### 4.2 Classification on Age Group
+&nbsp;
+
+### 4.2 Classification on Age Group and Gender
+
+In order to answer the question on which age group or gender would have higher spending score, we will subset the customers data into only three features: Age Group, Gender and Spending Score:
+
+```{r}
+# Create new dataset with only Age Group, Gender and Spending Score
+dataset <- data.frame(customers$Age.Group, customers$Gender, customers$Spending.Score..1.100.)
+colnames(dataset) <- c("Age.Group", "Gender", "Spending.Score")
+
+# Mutate Gender to factor type
+dataset <- dataset %>% mutate_if(is.character, as.factor)
+
+# Check the new dataset
+head(dataset)
+```
+
+&nbsp;
+
+#### 4.2.1 Age Group and Spending Score
+
+In classification, the dataset has to be separated into train and test sets. The train set is used for developing the ML model, which the test set is used to assess the performance of the classification model.
+
+In this project, the data will be split by using the "stratified sampling" method. This will divide the dataset into based on their outcomes and creates the training set by selecting from these subgroups with the same outcome distribution of the whole dataset.
+
+There is 75% of the dataset will be used for training, while 25% of it as a test set.
+
+
+```{r}
+set.seed(2021)
+
+# Perform stratified sampling
+train_index <- createDataPartition(dataset$Age.Group, p=0.75, list=FALSE)
+
+# Create train set and test set
+train_data <- dataset[train_index,]
+test_data  <- dataset[-train_index,]
+```
+
+10-fold cross validation with stratified sampling is used to divide the dataset in training and test sets. In classification modeling, cross validation is used with 10 repeats.
+
+```{r}
+# Run algorithms using 10-fold cross validation
+train_control <- trainControl(method="repeatedcv", number=10, repeats=10)
+```
+
+
+Now, we will start to predict the age group which is more significant to produce higher spending score. 
+
+`Support vector machine (SVM)` algorithm will be used for the classification. It finds an optimal hyperplane that separates data points that belong different classes. There are different kernel functions that can be used with `SVM` such as radial basis, hyperbolic, linear.
+
+We will use polynomial kernel function (svmPoly) for this data set.
+
+```{r}
+set.seed(2021)
+
+# training model with SVM
+model_svm <- train(Age.Group~.,
+                   data=dataset,
+                   method="svmPoly",
+                   trControl=train_control,
+                   tuneGrid = data.frame(degree=1,
+                                         scale=1,
+                                         C=1),
+                   preProcess=c("scale","center"),
+                   na.action = na.omit)
+
+# Run predictions
+pred_svm <- predict(model_svm, test_data)
+```
+
+After that, we will use the confusion matrix to evaluate the model performance.
+
+```{r}
+# Create confusion matrix
+cm_svm <- confusionMatrix(pred_svm, test_data$Age.Group)
+cm_svm
+```
+As you can see from the results of confusion matrix, the accuracy is quite low which is only 0.5714 or 57%. This implies that the model performance is quite low.
+
+Other than `SVM` algorithm, we can also use another classification algorithm to run our modeling and predictions. Then, we can compare the performance of both of the models and find the best among them.
+
+We will use `Naïve Bayes (NB)` algorithm which is based on the calculation posterior probabilities of different hypotheses and choosing the one with the highest probability.
+
+```{r}
+set.seed(2021)
+
+# training model with NB
+model_nb <- train(Age.Group~.,
+                  data=dataset,
+                  method="nb",
+                  trControl=train_control,
+                  preProcess=c("scale","center"),
+                  na.action = na.omit)
+
+
+# Run predictions
+pred_nb <- predict(model_nb, test_data)
+```
+
+```{r}
+# Create confusion matrix
+cm_nb <- confusionMatrix(pred_nb, test_data$Age.Group)
+cm_nb
+```
+
+As you can see from the results of confusion matrix, the accuracy is also quite low which is only 0.551 or 55%.
+
+Now, let us compare the two models and see which perform better.  
+
+```{r}
+# summarize accuracy of models
+results <- resamples(list(svm=model_svm, nb=model_nb))
+summary(results)
+```
+
+```{r}
+# compare accuracy of models
+dotplot(results)
+```
+  
+As we can observe from the graph above, the `SVM` model performs slightly better than the `NB` model. Therefore, we will use the `SVM` model to do our predictions.
+
+Now, let us see which age group is predicted to produce higher spending scores.  
+
+```{r}
+p1 <- predict(model_svm, data.frame(Gender="Male",
+                                   Spending.Score=1:100))
+
+p2 <- predict(model_svm, data.frame(Gender="Female",
+                                   Spending.Score=1:100))
+
+ggplot(data=dataset) +
+  geom_point(aes(y=Spending.Score, x=Age.Group)) +
+  geom_col(data=data.frame(x=p1, y=1:100), aes(x=x, y=y)) +
+  geom_col(data=data.frame(x=p2, y=1:100), aes(x=x, y=y))
+```
+  
+We can conclude that the age group **"Young Adult"** customers would likely to have higher spending score from our prediction.
+
+&nbsp;
+
+#### 4.2.2 Gender and Spending Score
+
+Now, we will continue to predict the gender which is likely to have higher spending score.
+
+Again, we will first split the dataset into train and test sets.
+
+```{r}
+set.seed(2021)
+
+# Perform stratified sampling
+train_index_2 <- createDataPartition(dataset$Gender, p=0.75, list=FALSE)
+
+# Create train set and test set
+train_data_2 <- dataset[train_index_2,]
+test_data_2  <- dataset[-train_index_2,]
+
+# Run algorithms using 10-fold cross validation
+train_control_2 <- trainControl(method="repeatedcv", number=10, repeats=10)
+```
+
+
+Then, we will train our model by using the SVM algorithm.
+
+```{r}
+set.seed(2021)
+
+# training model with SVM
+model_svm_2 <- train(Gender~.,
+                     data=dataset,
+                     method="svmPoly",
+                     trControl=train_control_2,
+                     tuneGrid = data.frame(degree=1,
+                                           scale=1,
+                                           C=1),
+                     preProcess=c("scale","center"),
+                     na.action = na.omit)
+
+# Run predictions
+pred_svm_2 <- predict(model_svm_2, test_data_2)
+```
+
+After that, we will use the confusion matrix to evaluate the model performance.  
+
+```{r}
+# Create confusion matrix
+cm_svm_2 <- confusionMatrix(pred_svm_2, test_data_2$Gender)
+cm_svm_2
+```
+  
+As you can see from the results of confusion matrix, the accuracy is quite low which is only 0.66 or 66%. This implies that the model performance is quite low.
+
+Now, let us see which gender is predicted to produce higher spending scores.  
+
+```{r}
+p1 <- predict(model_svm_2, data.frame(Age.Group="Middle Age Adult",
+                                   Spending.Score=1:100))
+
+p2 <- predict(model_svm_2, data.frame(Age.Group="Older Adult",
+                                   Spending.Score=1:100))
+
+p3 <- predict(model_svm_2, data.frame(Age.Group="Young Adult",
+                                   Spending.Score=1:100))
+
+ggplot(data=dataset) +
+  geom_point(aes(y=Spending.Score, x=Gender)) +
+  geom_col(data=data.frame(x=p1, y=1:100), aes(x=x, y=y)) +
+  geom_col(data=data.frame(x=p2, y=1:100), aes(x=x, y=y)) +
+  geom_col(data=data.frame(x=p3, y=1:100), aes(x=x, y=y))
+
+```
+  
+We can conclude that the **"Male"** and **"Female"** customers have equal changes to have higher spending score from our prediction.
+
+&nbsp;
 
 ## 5. Discussion
+
+Thorough this project, we have study the spending behaviour of the mall customers on how likely they will spend their money in the shopping complex. There are several factors we taken into consideration in the study, the customer's age group, gender and their annual income.
+
+After running a regression analysis on how the predictors (or factors) that is more significant to contribute to a higher spending score among the consumers, we found that the **"Young Adult"** age group is the key predictor with a with low p-value. This implies that the customers who fall under the **"Young Adult"** age group (with the age in the range between 18 to 35) would likely to have a higher spending score (around 60 in average) or buying intention when they come to visit the shopping mall.
+
+In order to further justify the findings, we also perform a classification analysis and predict which age group of customers will get higher spending score among other age groups. The result is similar to the outcome we get from the regression analysis, where the customers at their age between 18 to 35 will produce higher spending score even their gender and income level are different. 
+
+Therefore, we assume that this might be because that people at their age of 20 years old and above, they are just getting their first jobs and being independent. They might started to gain more money than when they were students and they start to buy the necessities and/or luxuries to upgrade their living standards. However, when they reach 30s, they might have established their own family and tried to save more money.
+
+Other than the age group, we also run classification analysis and prediction on the gender to see if gender makes a difference on the spending score. This is because men and women have different needs and they buy different products. They even shop differently and in general, have different attitudes about shopping. Therefore, the consumers might have different spending score among these two different genders. Based on the result of the analysis, we surprisingly found that the gender of customers is not significant to determine whether a **"Male"** or a **"Female"** customer would has higher spending score. 
+
+In a nutshell, the mall authorities could do marketing campaigns or loyalty program to customer in the age group **"Young Adult"** (18 to 35 years old) which are customer who have high spending scores to maintain such customer and raising possibility of sales.
+
+&nbsp;
+
+## 6. Conclusion
+
+Up until this point, we can conclude few findings:
+
+1. The age or the age group of the mall customers is the significant feature than affect their spending score.
+2. Customers in the age between 18 and 35 (young adult) have a higher spending score (~60) than the other groups.
+3. Gender has little to no effect on spending score of the mall customers.
+
+&nbsp;
+
